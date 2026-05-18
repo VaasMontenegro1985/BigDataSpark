@@ -1,5 +1,4 @@
 DROP TABLE IF EXISTS fact_sales CASCADE;
-DROP TABLE IF EXISTS dim_date CASCADE;
 DROP TABLE IF EXISTS dim_supplier CASCADE;
 DROP TABLE IF EXISTS dim_store CASCADE;
 DROP TABLE IF EXISTS dim_product CASCADE;
@@ -32,9 +31,6 @@ CREATE TABLE raw_data (
     product_quantity INT,
 
     sale_date DATE,
-    sale_customer_id INT,
-    sale_seller_id INT,
-    sale_product_id INT,
     sale_quantity INT,
     sale_total_price DECIMAL(10,2),
 
@@ -117,14 +113,6 @@ CREATE TABLE dim_supplier (
     phone VARCHAR(50)
 );
 
-CREATE TABLE dim_date (
-    date_id SERIAL PRIMARY KEY,
-    sale_date DATE,
-    year INT,
-    month INT,
-    day INT
-);
-
 CREATE TABLE fact_sales (
     fact_id SERIAL PRIMARY KEY,
     customer_id INT REFERENCES dim_customer(customer_id),
@@ -132,7 +120,7 @@ CREATE TABLE fact_sales (
     product_id INT REFERENCES dim_product(product_id),
     store_id INT REFERENCES dim_store(store_id),
     supplier_id INT REFERENCES dim_supplier(supplier_id),
-    date_id INT REFERENCES dim_date(date_id),
+    sale_date DATE,
     quantity INT,
     total_price DECIMAL(10,2)
 );

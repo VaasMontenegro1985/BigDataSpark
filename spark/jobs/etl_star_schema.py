@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, year, month, dayofmonth
+from pyspark.sql.functions import col
 
 POSTGRES_URL = "jdbc:postgresql://postgres:5432/postgres"
 JAR_PATH = "/opt/jars/postgresql-42.7.3.jar"
@@ -30,6 +30,9 @@ def main():
     spark = SparkSession.builder \
         .appName("ETL Star Schema") \
         .config("spark.jars", JAR_PATH) \
+        .config("spark.driver.memory", "1g") \
+        .config("spark.executor.memory", "1g") \
+        .config("spark.sql.shuffle.partitions", "4") \
         .getOrCreate()
 
     raw_df = read_table(spark, "raw_data")
@@ -102,22 +105,11 @@ def main():
     write_table(dim_supplier, "dim_supplier")
     print("dim_supplier written:", dim_supplier.count())
 
-    dim_date = raw_df.select(
-        col("sale_date")
-    ).dropDuplicates(["sale_date"]) \
-        .withColumn("year", year(col("sale_date"))) \
-        .withColumn("month", month(col("sale_date"))) \
-        .withColumn("day", dayofmonth(col("sale_date")))
-
-    write_table(dim_date, "dim_date")
-    print("dim_date written:", dim_date.count())
-
     customers = read_table(spark, "dim_customer")
     sellers = read_table(spark, "dim_seller")
     products = read_table(spark, "dim_product")
     stores = read_table(spark, "dim_store")
     suppliers = read_table(spark, "dim_supplier")
-    dates = read_table(spark, "dim_date")
 
     fact_sales = raw_df \
         .join(customers, raw_df.customer_email == customers.email, "left") \
@@ -134,14 +126,13 @@ def main():
             (raw_df.product_description == products.review_comment),
             "left"
         ) \
-        .join(dates, raw_df.sale_date == dates.sale_date, "left") \
         .select(
             customers.customer_id.alias("customer_id"),
             sellers.seller_id.alias("seller_id"),
             products.product_id.alias("product_id"),
             stores.store_id.alias("store_id"),
             suppliers.supplier_id.alias("supplier_id"),
-            dates.date_id.alias("date_id"),
+            raw_df.sale_date.alias("sale_date"),
             raw_df.sale_quantity.alias("quantity"),
             raw_df.sale_total_price.alias("total_price")
         )
