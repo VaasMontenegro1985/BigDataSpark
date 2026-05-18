@@ -1,6 +1,89 @@
 # BigDataSpark
 
-Анализ больших данных - лабораторная работа №2 - ETL реализованный с помощью Spark
+# Запуск лабораторной работы
+
+## 1. Поднять контейнеры
+
+```powershell
+docker compose up -d
+```
+
+---
+
+## 2. Создать таблицы PostgreSQL
+
+```powershell
+Get-Content .\sql\create_star_schema.sql | docker exec -i postgres_bd psql -U postgres -d postgres
+```
+
+---
+
+## 3. Загрузить исходные CSV данные
+
+```powershell
+Get-Content .\sql\load_raw_data.sql | docker exec -i postgres_bd psql -U postgres -d postgres
+```
+
+---
+
+## 4. Проверить подключение Spark к PostgreSQL
+
+```powershell
+docker exec -it spark_bd bash
+```
+
+```bash
+/opt/spark/bin/spark-submit \
+  --jars /opt/jars/postgresql-42.7.3.jar \
+  /opt/jobs/test_postgres.py
+```
+
+---
+
+## 5. Запустить ETL: raw_data → Star Schema
+
+```bash
+/opt/spark/bin/spark-submit \
+  --jars /opt/jars/postgresql-42.7.3.jar \
+  /opt/jobs/etl_star_schema.py
+```
+
+---
+
+## 6. Создать таблицы ClickHouse
+
+```powershell
+Get-Content .\sql\clickhouse_tables.sql | docker exec -i clickhouse_bd clickhouse-client
+```
+
+---
+
+## 7. Запустить ETL: Star Schema → ClickHouse Reports
+
+```bash
+/opt/spark/bin/spark-submit \
+  --jars /opt/jars/postgresql-42.7.3.jar,/opt/jars/clickhouse-jdbc.jar \
+  /opt/jobs/etl_clickhouse_reports.py
+```
+
+---
+
+## 8. Проверка ClickHouse
+
+```powershell
+docker exec -it clickhouse_bd clickhouse-client
+```
+
+```sql
+USE analytics;
+
+SELECT COUNT(*) FROM report_product_sales;
+SELECT COUNT(*) FROM report_customer_sales;
+SELECT COUNT(*) FROM report_time_sales;
+SELECT COUNT(*) FROM report_store_sales;
+SELECT COUNT(*) FROM report_supplier_sales;
+SELECT COUNT(*) FROM report_product_quality;
+```
 
 Одним из самых популярных фреймворков для работы с Big Data является Apache Spark. Apache Spark - мощный фреймворк, который предлагает широкий набор функциональности для простого написания ETL-пайплайнов.
 
